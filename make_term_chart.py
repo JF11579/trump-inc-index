@@ -49,7 +49,7 @@ pd.DataFrame({"invested": invested, "trump_portfolio": trump, "small_cap_portfol
               "whole_market_portfolio": whole}).round(2).to_csv("data/portfolio_term.csv")
 
 # ---- figure ------------------------------------------------------------------
-W, H = 16, 8
+W, H = 16, 9
 fig = plt.figure(figsize=(W, H), dpi=150)
 gs = fig.add_gridspec(1, 2, width_ratios=[1.75, 1], wspace=0.10)
 ax, tab = fig.add_subplot(gs[0]), fig.add_subplot(gs[1])
@@ -72,26 +72,41 @@ ax.text(pd.Timestamp("2025-10-20"), 1060, "dashed = money put in so far\n(steps 
         fontsize=10, color=INK2, va="top")
 
 # ---- members panel ----------------------------------------------------------
-TIE = {"DJT": "Trump: largest shareholder", "PSQH": "Don Jr: board", "UMAC": "Don Jr: adviser, shareholder",
-       "DOMH": "Don Jr & Eric: advisers, >10% owners", "3350.T": "Eric: adviser", "DTCX": "Don Jr: shareholder",
-       "PEW": "Don Jr: board", "MCGA": "Trump Media crypto deal", "AIFC": "Eric: adviser (WLFI tokens)",
-       "ABTC": "Eric: co-founder; Don Jr: stake", "MMA": "Don Jr: adviser", "NWAX": "Don Jr & Eric: advisers",
+TIE = {"DJT": "Trump: largest shareholder (also holds bitcoin)", "PSQH": "Don Jr: board", "UMAC": "Don Jr: adviser, shareholder",
+       "DOMH": "Don Jr & Eric: advisers, >10% owners", "3350.T": "Eric: adviser · bitcoin treasury", "DTCX": "Don Jr: shareholder · crypto treasury/mining",
+       "PEW": "Don Jr: board · online gun store", "MCGA": "Merging with Trump Media's crypto vehicle", "AIFC": "Eric: adviser · holds WLFI tokens",
+       "ABTC": "Eric: co-founder; Don Jr: stake · bitcoin mining", "MMA": "Don Jr: adviser · combat sports", "NWAX": "Don Jr & Eric: advisers",
        "CLBR": "Don Jr: board"}
+GROUPS = [("Crypto businesses", ["ABTC", "3350.T", "DTCX", "AIFC"], "BTC-USD", "bitcoin"),
+          ("Other businesses", ["DJT", "PSQH", "UMAC", "DOMH", "PEW", "MMA"], "IWC", "small-company stocks"),
+          ("SPACs (cash shells)", ["MCGA", "NWAX", "CLBR"], None, None)]
 tab.axis("off"); tab.set_xlim(0, 1); tab.set_ylim(0, 1)
-rows = sorted(joins, key=lambda t: joins[t])
 tab.text(0, 1.0, "$100 in each of the 13 members", fontsize=14, fontweight="bold", va="top")
-tab.text(0.70, 0.945, "bought", fontsize=10, color=INK2, ha="right", va="top")
-tab.text(1.0, 0.945, "worth\nnow", fontsize=10, color=INK2, ha="right", va="top")
-step = 0.88 / len(rows)
-for i, t in enumerate(rows):
-    y = 0.88 - i * step
-    tab.text(0, y, {"MCGA": "Yorkville SPAC (MCGA)"}.get(t, short(t)), fontsize=11.5, fontweight="bold", va="top")
-    tab.text(0, y - 0.028, TIE[t], fontsize=9.5, va="top", color=INK2)
-    tab.text(0.70, y, "Jan 17 2025" if joins[t] == BASE else joins[t].strftime("%b %-d %Y"),
-             fontsize=10.5, va="top", ha="right", color=INK2)
-    tab.text(1.0, y, f"${trump_pos[t].iloc[-1]:,.0f}", fontsize=12, va="top", ha="right", fontweight="bold")
-    if i:
-        tab.plot([0, 1], [y + 0.012, y + 0.012], color="#e6e5e1", lw=1)
+tab.text(0.72, 0.955, "bought", fontsize=10, color=INK2, ha="right", va="top")
+tab.text(1.0, 0.955, "worth now", fontsize=10, color=INK2, ha="right", va="top")
+n_units = sum(len(m) for _, m, _, _ in GROUPS) + 1.45 * len(GROUPS)
+step = 0.92 / n_units
+y = 0.915
+for gname, members, bench, bname in GROUPS:
+    members = sorted(members, key=lambda t: joins[t])
+    now = sum(trump_pos[t].iloc[-1] for t in members)
+    y -= 0.25 * step
+    tab.text(0, y, gname, fontsize=12.5, fontweight="bold", va="top", color=RED)
+    tab.text(1.0, y, f"${STAKE * len(members):,} → ${now:,.0f}", fontsize=12.5, fontweight="bold", va="top", ha="right", color=RED)
+    if bench:
+        b_now = sum(position(bench, joins[t]).iloc[-1] for t in members)
+        tab.text(0, y - 0.028, f"Same $ in {bname} on the same days: ${b_now:,.0f}", fontsize=9.5, va="top", color=INK2)
+    else:
+        tab.text(0, y - 0.028, "Hold investors' cash in trust until a merger, so prices barely move", fontsize=9.5, va="top", color=INK2)
+    tab.plot([0, 1], [y - 0.052, y - 0.052], color=INK2, lw=0.8)
+    y -= step * 1.2
+    for t in members:
+        tab.text(0.02, y, {"MCGA": "Yorkville SPAC (MCGA)"}.get(t, short(t)), fontsize=11, fontweight="bold", va="top")
+        tab.text(0.02, y - 0.026, TIE[t], fontsize=9, va="top", color=INK2)
+        tab.text(0.72, y, "Jan 17 2025" if joins[t] == BASE else joins[t].strftime("%b %-d %Y"),
+                 fontsize=10, va="top", ha="right", color=INK2)
+        tab.text(1.0, y, f"${trump_pos[t].iloc[-1]:,.0f}", fontsize=11.5, va="top", ha="right", fontweight="bold")
+        y -= step
 
 asof = p.index[-1].strftime("%b %-d, %Y")
 total = STAKE * len(joins)
