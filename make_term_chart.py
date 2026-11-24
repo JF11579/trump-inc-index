@@ -87,6 +87,7 @@ tab.text(1.0, 0.955, "worth now", fontsize=10, color=INK2, ha="right", va="top")
 n_units = sum(len(m) for _, m, _, _ in GROUPS) + 1.45 * len(GROUPS)
 step = 0.92 / n_units
 y = 0.915
+gsum = {}
 for gname, members, bench, bname in GROUPS:
     members = sorted(members, key=lambda t: joins[t])
     now = sum(trump_pos[t].iloc[-1] for t in members)
@@ -95,6 +96,7 @@ for gname, members, bench, bname in GROUPS:
     tab.text(1.0, y, f"${STAKE * len(members):,} → ${now:,.0f}", fontsize=12.5, fontweight="bold", va="top", ha="right", color=RED)
     if bench:
         b_now = sum(position(bench, joins[t]).iloc[-1] for t in members)
+        gsum[gname] = (STAKE * len(members), now, b_now)
         tab.text(0, y - 0.028, f"Same $ in {bname} on the same days: ${b_now:,.0f}", fontsize=9.5, va="top", color=INK2)
     else:
         tab.text(0, y - 0.028, "Hold investors' cash in trust until a merger, so prices barely move", fontsize=9.5, va="top", color=INK2)
@@ -107,6 +109,17 @@ for gname, members, bench, bname in GROUPS:
                  fontsize=10, va="top", ha="right", color=INK2)
         tab.text(1.0, y, f"${trump_pos[t].iloc[-1]:,.0f}", fontsize=11.5, va="top", ha="right", fontweight="bold")
         y -= step
+
+# ---- callout: the "aren't these just crypto stocks?" answer -------------------
+(ci, cn, cb), (oi, on, ob) = gsum["Crypto businesses"], gsum["Other businesses"]
+ax.text(p.index[0] + pd.Timedelta(days=8), ax.get_ylim()[1] * 0.97, "Aren't these just crypto stocks?",
+        fontsize=13, fontweight="bold", va="top", color=INK,
+        bbox=dict(facecolor=SURF, edgecolor="none", pad=2))
+ax.text(p.index[0] + pd.Timedelta(days=8), ax.get_ylim()[1] * 0.97 - 95,
+        f"4 crypto businesses: ${ci:,} → ${cn:,.0f}\n   (same $ in bitcoin itself: ${cb:,.0f})\n"
+        f"6 non-crypto businesses: ${oi:,} → ${on:,.0f}\n   (same $ in small-company stocks: ${ob:,.0f})",
+        fontsize=11.5, va="top", color=INK, linespacing=1.5,
+        bbox=dict(facecolor=SURF, edgecolor="none", pad=2))
 
 asof = p.index[-1].strftime("%b %-d, %Y")
 total = STAKE * len(joins)
