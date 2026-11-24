@@ -30,8 +30,9 @@ def build(cols):
 
 index = build(list(joins))
 no_spac = build(stocks[stocks.type == "stock"].ticker.tolist())
-market = 100 * p["IWV"] / p["IWV"].iloc[0]
-pd.DataFrame({"trump_inc_index": index, "ex_spacs": no_spac, "russell_3000": market}).round(2).to_csv("data/index_term.csv")
+market = 100 * p["IWC"] / p["IWC"].iloc[0]  # Russell Microcap: the size-matched peer
+whole = 100 * p["IWV"] / p["IWV"].iloc[0]   # Russell 3000, quoted in the footer
+pd.DataFrame({"trump_inc_index": index, "ex_spacs": no_spac, "russell_microcap": market, "russell_3000": whole}).round(2).to_csv("data/index_term.csv")
 
 W, H = 16, 8
 fig = plt.figure(figsize=(W, H), dpi=150)
@@ -40,7 +41,7 @@ ax, tab = fig.add_subplot(gs[0]), fig.add_subplot(gs[1])
 ax.axhline(100, color=INK2, lw=1)
 ax.plot(market, color=GRAY, lw=2)
 ax.plot(index, color=RED, lw=2.5)
-for s, c, label in [(index, RED, "Trump Inc Index"), (market, GRAY, "Russell 3000")]:
+for s, c, label in [(index, RED, "Trump Inc Index"), (market, GRAY, "Small-company\nstocks")]:
     ax.scatter(s.index[-1], s.iloc[-1], color=c, s=50, zorder=3, edgecolor=SURF, linewidth=2)
     ax.annotate(f"{label}\n{s.iloc[-1]:.0f}", (s.index[-1], s.iloc[-1]), xytext=(10, 0),
                 textcoords="offset points", va="center", fontsize=13, color=INK, fontweight="bold")
@@ -81,11 +82,11 @@ for i, t in enumerate(rows):
     if i:
         tab.plot([0, 1], [y + 0.012, y + 0.012], color="#e6e5e1", lw=1)
 
-top = header(fig, f"Since inauguration day: Trump Inc {index.iloc[-1] - 100:+.0f}%, US market {market.iloc[-1] - 100:+.0f}%",
-             f"Equal-weighted index of Trump-family-linked stocks vs the Russell 3000 · Jan 17 2025 = 100 · through {asof}", H)
-footer(fig, f"Without the 3 SPACs (cash in trust, ~flat) the index is at {no_spac.iloc[-1]:.0f}. "
+top = header(fig, f"Since inauguration day: Trump Inc {index.iloc[-1] - 100:+.0f}%, small-company stocks {market.iloc[-1] - 100:+.0f}%",
+             f"Equal-weighted index of Trump-family-linked stocks vs the Russell Microcap index (iShares IWC) · Jan 17 2025 = 100 · through {asof}", H)
+footer(fig, f"The whole US market (Russell 3000) is up {whole.iloc[-1] - 100:.0f}% over the same period. Without the 3 SPACs (cash in trust, ~flat) the index is at {no_spac.iloc[-1]:.0f}.\n"
             "DJT, PSQH and UMAC ties predate the inauguration; the rest join on announcement.")
-fig.subplots_adjust(left=0.05, right=0.985, top=top - 0.02, bottom=0.14)
+fig.subplots_adjust(left=0.05, right=0.985, top=top - 0.02, bottom=0.16)
 Path("plots").mkdir(exist_ok=True)
 fig.savefig("plots/4_since_inauguration.png")
 

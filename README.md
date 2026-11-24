@@ -42,6 +42,8 @@ The $TRUMP meme coin and the World Liberty Financial (WLFI) token appear in the 
 
 `make_term_chart.py` sets Jan 17, 2025 = 100. That was the last close before the Jan 20 inauguration, which fell on a market holiday. **Each company joins the index on the day its Trump tie became public**, using the `joins_index` column in `holdings.csv`. This keeps price history from before a company was Trump-linked out of the index, such as GrabAGun's blank-SPAC period or American Bitcoin's predecessor company before the merger. Early on, the index holds only DJT, PSQH and UMAC, the three companies whose ties predate the inauguration.
 
+**Benchmark for this chart: the Russell Microcap index (iShares IWC), not the Russell 3000.** Most Trump Inc members are microcaps, so this answers the objection that "tiny speculative stocks always crash." Microcaps as a group are *up* about 30% since the inauguration, beating the S&P 500 (+23%) and the Russell 3000 (+22%). The 2026 charts (1–3) keep the Russell 3000 to match The Economist.
+
 ## Caveats
 
 - **The SPACs (NWAX, CLBR, MCGA) hold cash in trust**, so they sit near $10 until a merger closes. They make the index look *less* bad: without them it's about 35, not 45.
