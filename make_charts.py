@@ -10,6 +10,7 @@ RED, GRAY, INK, INK2, GRID, SURF = "#e34948", "#8a8985", "#0b0b0b", "#52514e", "
 SOURCE = "Data: Yahoo Finance via yfinance · github.com/JF11579/trump-inc-index"
 
 plt.rcParams.update({
+    "text.parse_math": False,  # titles use literal $ signs
     "font.family": "DejaVu Sans", "font.size": 14, "text.color": INK,
     "axes.edgecolor": GRID, "axes.labelcolor": INK2, "xtick.color": INK2, "ytick.color": INK2,
     "axes.facecolor": SURF, "figure.facecolor": SURF, "axes.grid": True, "grid.color": GRID,

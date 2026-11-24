@@ -36,13 +36,18 @@ The $TRUMP meme coin and the World Liberty Financial (WLFI) token appear in the 
 - **Data:** daily closes from Yahoo Finance via `yfinance`, adjusted for splits and dividends. Metaplanet (Tokyo) and the crypto prices are forward-filled onto US trading days.
 - **Check against The Economist:** on Nov 16 this basket stood at about 47, versus about 42 in The Economist's chart. The 13 names won't match theirs exactly.
 
-## Second term view (since inauguration)
+## Second term: $100 in each
 
 ![Since inauguration](plots/4_since_inauguration.png)
 
-`make_term_chart.py` sets Jan 17, 2025 = 100. That was the last close before the Jan 20 inauguration, which fell on a market holiday. **Each company joins the index on the day its Trump tie became public**, using the `joins_index` column in `holdings.csv`. This keeps price history from before a company was Trump-linked out of the index, such as GrabAGun's blank-SPAC period or American Bitcoin's predecessor company before the merger. Early on, the index holds only DJT, PSQH and UMAC, the three companies whose ties predate the inauguration.
+`make_term_chart.py` asks a plain question: **if you'd put $100 into each Trump-linked company on the day its family tie was announced, what would it be worth now, compared with the same $100s put into small-company stocks on the same days?**
 
-**Benchmark for this chart: the Russell Microcap index (iShares IWC), not the Russell 3000.** Most Trump Inc members are microcaps, so this answers the objection that "tiny speculative stocks always crash." Microcaps as a group are *up* about 30% since the inauguration, beating the S&P 500 (+23%) and the Russell 3000 (+22%). The 2026 charts (1–3) keep the Russell 3000 to match The Economist.
+- **Purchase dates** come from the `joins_index` column in `holdings.csv`. DJT, PSQH and UMAC ties predate the inauguration, so those three are bought at the Jan 17, 2025 close, the last close before the Jan 20 inauguration. That keeps out price history from before a company was Trump-linked, such as GrabAGun's blank-SPAC period or American Bitcoin's predecessor company.
+- **No rebalancing.** Each $100 just rides, so the result is simply the sum of 13 positions.
+- **Matched benchmark.** Every $100 into a Trump stock is paired with $100 into the iShares Micro-Cap ETF (IWC, tracking the Russell Microcap) on the same day. Most members are microcaps, so this answers the objection that "tiny speculative stocks always crash." 10 of the 13 were worth under $1B when bought, and the 3 larger ones (Trump Media, American Bitcoin, Metaplanet) fell too.
+- **The chart's footer** also shows the same money in the whole US market (Russell 3000, IWV) and the result without the 3 SPACs.
+
+An earlier version of this chart used a daily-rebalanced equal-weighted index. Rebalancing daily keeps adding money to the losers, so with stocks this volatile it shows a steeper loss (−79% vs −64%). The $100-in-each version is easier to explain and more conservative.
 
 ## Caveats
 
@@ -56,7 +61,7 @@ The $TRUMP meme coin and the World Liberty Financial (WLFI) token appear in the 
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python fetch_prices.py   # -> data/prices.csv
 .venv/bin/python make_charts.py    # -> data/index.csv, plots/1-3
-.venv/bin/python make_term_chart.py # -> data/index_term.csv, plots/4 (also reruns 1-3)
+.venv/bin/python make_term_chart.py # -> data/portfolio_term.csv, plots/4 (also reruns 1-3)
 ```
 
 ## Charts
@@ -64,4 +69,4 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 - `plots/1_index_vs_market.png`: the index vs the Russell 3000
 - `plots/2_ytd_by_holding.png`: year-to-date change for each holding
 - `plots/3_small_multiples.png`: each asset's price path vs the market
-- `plots/4_since_inauguration.png`: the index since Jan 20, 2025, with each company joining when its tie was announced
+- `plots/4_since_inauguration.png`: $100 in each company on the day its tie was announced vs the same $ in small-company stocks

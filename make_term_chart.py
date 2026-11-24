@@ -1,7 +1,9 @@
-"""Trump Inc Index across the second term: Jan 17 2025 (last close before the Jan 20 inauguration) = 100.
+"""Second-term chart: $100 into each Trump-linked company on the day its tie was announced,
+vs the same $100 put into small-company stocks (iShares IWC, Russell Microcap) on the same day.
 
-Each company joins the index on the day its Trump-family tie became public (holdings.csv `joins_index`),
-so pre-tie price history (e.g. a SPAC shell before a merger) never counts.
+DJT, PSQH and UMAC ties predate the inauguration, so they are bought at the Jan 17 2025 close
+(last close before the Jan 20 inauguration). Every other company is bought at the close on its
+announcement date (holdings.csv `joins_index`). No rebalancing: each $100 just rides.
 """
 from pathlib import Path
 
@@ -11,88 +13,99 @@ import pandas as pd
 
 from make_charts import INK, INK2, RED, GRAY, SURF, header, footer, short  # reuse styling
 
-BASE = "2025-01-17"
+BASE = pd.Timestamp("2025-01-17")
+STAKE = 100
+
 h = pd.read_csv("holdings.csv")
 stocks = h[h.type.isin(["stock", "spac"])]
-joins = dict(zip(stocks.ticker, pd.to_datetime(stocks.joins_index)))
+joins = {t: max(pd.Timestamp(d), BASE) for t, d in zip(stocks.ticker, stocks.joins_index)}
+spacs = set(stocks[stocks.type == "spac"].ticker)
 
 prices = pd.read_csv("data/prices.csv", index_col=0, parse_dates=True)
 p = prices[(prices.index >= BASE) & (prices.index.day_of_week < 5)].ffill()
 
-rets = p[list(joins)].pct_change()
-for t, d in joins.items():
-    rets.loc[rets.index <= d, t] = float("nan")  # a member's returns count only after it joins
+
+def entry_price(s, d):
+    return s.loc[:d].dropna().iloc[-1]
 
 
-def build(cols):
-    return 100 * (1 + rets[cols].mean(axis=1).fillna(0)).cumprod()
+def position(ticker, join):
+    """Dollar value over time of $100 put into `ticker` at the close on `join` (0 before)."""
+    s = p[ticker]
+    return (STAKE * s / entry_price(s, join)).where(p.index >= join, 0.0)
 
 
-index = build(list(joins))
-no_spac = build(stocks[stocks.type == "stock"].ticker.tolist())
-market = 100 * p["IWC"] / p["IWC"].iloc[0]  # Russell Microcap: the size-matched peer
-whole = 100 * p["IWV"] / p["IWV"].iloc[0]   # Russell 3000, quoted in the footer
-pd.DataFrame({"trump_inc_index": index, "ex_spacs": no_spac, "russell_microcap": market, "russell_3000": whole}).round(2).to_csv("data/index_term.csv")
+trump_pos = {t: position(t, d) for t, d in joins.items()}
+small_pos = {t: position("IWC", d) for t, d in joins.items()}   # matched $100 on the same day
+whole_pos = {t: position("IWV", d) for t, d in joins.items()}
+trump, small, whole = (pd.DataFrame(x).sum(axis=1) for x in (trump_pos, small_pos, whole_pos))
+invested = pd.DataFrame({t: (p.index >= d) * STAKE for t, d in joins.items()}, index=p.index).sum(axis=1)
 
+ex = [t for t in joins if t not in spacs]
+trump_ex = sum(trump_pos[t].iloc[-1] for t in ex)
+small_ex = sum(small_pos[t].iloc[-1] for t in ex)
+
+pd.DataFrame({"invested": invested, "trump_portfolio": trump, "small_cap_portfolio": small,
+              "whole_market_portfolio": whole}).round(2).to_csv("data/portfolio_term.csv")
+
+# ---- figure ------------------------------------------------------------------
 W, H = 16, 8
 fig = plt.figure(figsize=(W, H), dpi=150)
 gs = fig.add_gridspec(1, 2, width_ratios=[1.75, 1], wspace=0.10)
 ax, tab = fig.add_subplot(gs[0]), fig.add_subplot(gs[1])
-ax.axhline(100, color=INK2, lw=1)
-ax.plot(market, color=GRAY, lw=2)
-ax.plot(index, color=RED, lw=2.5)
-for s, c, label in [(index, RED, "Trump Inc Index"), (market, GRAY, "Small-company\nstocks")]:
+
+ax.step(invested.index, invested, where="post", color=INK2, lw=1.2, ls=(0, (4, 3)))
+ax.plot(small, color=GRAY, lw=2)
+ax.plot(trump, color=RED, lw=2.5)
+for s, c, label in [(small, GRAY, "Same $ in small-\ncompany stocks"), (trump, RED, "Trump-linked\nstocks"),
+                    (invested, INK2, "Total put in")]:
     ax.scatter(s.index[-1], s.iloc[-1], color=c, s=50, zorder=3, edgecolor=SURF, linewidth=2)
-    ax.annotate(f"{label}\n{s.iloc[-1]:.0f}", (s.index[-1], s.iloc[-1]), xytext=(10, 0),
-                textcoords="offset points", va="center", fontsize=13, color=INK, fontweight="bold")
-pk = index.idxmax()
-# rug of join dates along the bottom
-for t, d in joins.items():
-    if d > pd.Timestamp(BASE):
-        ax.plot([d, d], [0, 5], color=INK2, lw=1)
-ax.text(pd.Timestamp(BASE) + pd.Timedelta(days=4), 7, "| = company joins the index as its Trump tie is announced",
-        fontsize=10, color=INK2)
-ax.set_ylim(0, max(index.max(), market.max()) * 1.15)
-ax.set_xlim(p.index[0], p.index[-1] + pd.Timedelta(days=120))
+    ax.annotate(f"{label}\n${s.iloc[-1]:,.0f}", (s.index[-1], s.iloc[-1]), xytext=(10, 0),
+                textcoords="offset points", va="center", fontsize=12.5, color=INK,
+                fontweight="normal" if c == INK2 else "bold")
+ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda v, _: f"${v:,.0f}"))
+ax.set_ylim(0, max(small.max(), invested.max()) * 1.12)
+ax.set_xlim(p.index[0], p.index[-1] + pd.Timedelta(days=110))
 ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=[1, 4, 7, 10]))
 ax.xaxis.set_major_formatter(mdates.DateFormatter("%b\n%Y"))
+ax.text(pd.Timestamp("2025-10-20"), 1060, "dashed = money put in so far\n(steps up $100 as each company joins)",
+        fontsize=10, color=INK2, va="top")
 
-asof = p.index[-1].strftime("%b %-d, %Y")
-# ---- members panel: who is "Trump Inc", when they joined, change since joining
+# ---- members panel ----------------------------------------------------------
 TIE = {"DJT": "Trump: largest shareholder", "PSQH": "Don Jr: board", "UMAC": "Don Jr: adviser, shareholder",
        "DOMH": "Don Jr & Eric: advisers, >10% owners", "3350.T": "Eric: adviser", "DTCX": "Don Jr: shareholder",
        "PEW": "Don Jr: board", "MCGA": "Trump Media crypto deal", "AIFC": "Eric: adviser (WLFI tokens)",
        "ABTC": "Eric: co-founder; Don Jr: stake", "MMA": "Don Jr: adviser", "NWAX": "Don Jr & Eric: advisers",
        "CLBR": "Don Jr: board"}
-tab.axis("off")
-tab.set_xlim(0, 1); tab.set_ylim(0, 1)
+tab.axis("off"); tab.set_xlim(0, 1); tab.set_ylim(0, 1)
 rows = sorted(joins, key=lambda t: joins[t])
-tab.text(0, 1.0, "The 13 members of Trump Inc", fontsize=14, fontweight="bold", va="top")
-tab.text(0.70, 0.945, "joined", fontsize=10, color=INK2, ha="right", va="top")
-tab.text(1.0, 0.945, "since\njoining", fontsize=10, color=INK2, ha="right", va="top")
+tab.text(0, 1.0, "$100 in each of the 13 members", fontsize=14, fontweight="bold", va="top")
+tab.text(0.70, 0.945, "bought", fontsize=10, color=INK2, ha="right", va="top")
+tab.text(1.0, 0.945, "worth\nnow", fontsize=10, color=INK2, ha="right", va="top")
 step = 0.88 / len(rows)
-since = {}
 for i, t in enumerate(rows):
     y = 0.88 - i * step
-    s_ = p[t].dropna()
-    chg = s_.iloc[-1] / s_.loc[:joins[t]].iloc[-1] - 1 if joins[t] >= s_.index[0] else s_.iloc[-1] / s_.iloc[0] - 1
-    since[t] = chg
-    tab.text(0, y, {"MCGA": "Yorkville SPAC (MCGA)"}.get(t, short(t)), fontsize=11.5, fontweight="bold", va="top", color=INK)
+    tab.text(0, y, {"MCGA": "Yorkville SPAC (MCGA)"}.get(t, short(t)), fontsize=11.5, fontweight="bold", va="top")
     tab.text(0, y - 0.028, TIE[t], fontsize=9.5, va="top", color=INK2)
-    tab.text(0.70, y, ("Day 1" if joins[t] <= pd.Timestamp(BASE) else joins[t].strftime("%b %Y")), fontsize=11, va="top", ha="right", color=INK2)
-    tab.text(1.0, y, ("0%" if round(chg, 2) == 0 else f"{chg:+.0%}"), fontsize=12, va="top", ha="right", color=INK, fontweight="bold")
+    tab.text(0.70, y, "Jan 17 2025" if joins[t] == BASE else joins[t].strftime("%b %-d %Y"),
+             fontsize=10.5, va="top", ha="right", color=INK2)
+    tab.text(1.0, y, f"${trump_pos[t].iloc[-1]:,.0f}", fontsize=12, va="top", ha="right", fontweight="bold")
     if i:
         tab.plot([0, 1], [y + 0.012, y + 0.012], color="#e6e5e1", lw=1)
 
-top = header(fig, f"Since inauguration day: Trump Inc {index.iloc[-1] - 100:+.0f}%, small-company stocks {market.iloc[-1] - 100:+.0f}%",
-             f"Equal-weighted index of Trump-family-linked stocks vs the Russell Microcap index (iShares IWC) · Jan 17 2025 = 100 · through {asof}", H)
-footer(fig, "Size check: 10 of the 13 were worth under $1B when they joined, the same size class as the microcap index. "
-            f"The 3 bigger ones fell too: Trump Media {since['DJT']:.0%}, American Bitcoin {since['ABTC']:.0%}, Metaplanet {since['3350.T']:.0%}.\n"
-            f"Whole US market (Russell 3000): {whole.iloc[-1] - 100:+.0f}% over the same period. Without the 3 SPACs (cash in trust, ~flat) the index is at {no_spac.iloc[-1]:.0f}. "
-            "DJT, PSQH and UMAC ties predate the inauguration.")
-fig.subplots_adjust(left=0.05, right=0.985, top=top - 0.02, bottom=0.16)
+asof = p.index[-1].strftime("%b %-d, %Y")
+total = STAKE * len(joins)
+top = header(fig, f"${total:,} in Trump-linked stocks is now worth ${trump.iloc[-1]:,.0f}. In small-company stocks: ${small.iloc[-1]:,.0f}",
+             "$100 into each company on the day its Trump-family tie was announced, vs $100 into small-company stocks "
+             f"(iShares Russell Microcap ETF, IWC) on the same day · through {asof}", H)
+footer(fig, "Size check: 10 of the 13 were worth under $1B when bought, the same size class as the microcap index; "
+            f"the 3 bigger ones fell too (Trump Media, American Bitcoin, Metaplanet).\n"
+            f"Same $ in the whole US market (Russell 3000): ${whole.iloc[-1]:,.0f}. Without the 3 SPACs (cash in trust, ~flat): "
+            f"${len(ex) * STAKE:,} → ${trump_ex:,.0f}, vs ${small_ex:,.0f} in small stocks. "
+            "DJT, PSQH, UMAC ties predate the inauguration, so they're bought Jan 17 2025.")
+fig.subplots_adjust(left=0.06, right=0.985, top=top - 0.02, bottom=0.16)
 Path("plots").mkdir(exist_ok=True)
 fig.savefig("plots/4_since_inauguration.png")
 
-print(f"index {index.iloc[-1]:.1f}  ex-SPAC {no_spac.iloc[-1]:.1f}  market {market.iloc[-1]:.1f}  peak {index.max():.1f} on {pk.date()}")
-print(index.resample("QE").last().round(0).to_string())
+print(f"invested ${total}  trump ${trump.iloc[-1]:,.0f}  small ${small.iloc[-1]:,.0f}  whole ${whole.iloc[-1]:,.0f}  "
+      f"ex-SPAC ${trump_ex:,.0f} vs ${small_ex:,.0f}")
