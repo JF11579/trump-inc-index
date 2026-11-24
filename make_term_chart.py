@@ -71,10 +71,12 @@ tab.text(0, 1.0, "The 13 members of Trump Inc", fontsize=14, fontweight="bold", 
 tab.text(0.70, 0.945, "joined", fontsize=10, color=INK2, ha="right", va="top")
 tab.text(1.0, 0.945, "since\njoining", fontsize=10, color=INK2, ha="right", va="top")
 step = 0.88 / len(rows)
+since = {}
 for i, t in enumerate(rows):
     y = 0.88 - i * step
     s_ = p[t].dropna()
     chg = s_.iloc[-1] / s_.loc[:joins[t]].iloc[-1] - 1 if joins[t] >= s_.index[0] else s_.iloc[-1] / s_.iloc[0] - 1
+    since[t] = chg
     tab.text(0, y, {"MCGA": "Yorkville SPAC (MCGA)"}.get(t, short(t)), fontsize=11.5, fontweight="bold", va="top", color=INK)
     tab.text(0, y - 0.028, TIE[t], fontsize=9.5, va="top", color=INK2)
     tab.text(0.70, y, ("Day 1" if joins[t] <= pd.Timestamp(BASE) else joins[t].strftime("%b %Y")), fontsize=11, va="top", ha="right", color=INK2)
@@ -84,8 +86,10 @@ for i, t in enumerate(rows):
 
 top = header(fig, f"Since inauguration day: Trump Inc {index.iloc[-1] - 100:+.0f}%, small-company stocks {market.iloc[-1] - 100:+.0f}%",
              f"Equal-weighted index of Trump-family-linked stocks vs the Russell Microcap index (iShares IWC) · Jan 17 2025 = 100 · through {asof}", H)
-footer(fig, f"The whole US market (Russell 3000) is up {whole.iloc[-1] - 100:.0f}% over the same period. Without the 3 SPACs (cash in trust, ~flat) the index is at {no_spac.iloc[-1]:.0f}.\n"
-            "DJT, PSQH and UMAC ties predate the inauguration; the rest join on announcement.")
+footer(fig, "Size check: 10 of the 13 were worth under $1B when they joined, the same size class as the microcap index. "
+            f"The 3 bigger ones fell too: Trump Media {since['DJT']:.0%}, American Bitcoin {since['ABTC']:.0%}, Metaplanet {since['3350.T']:.0%}.\n"
+            f"Whole US market (Russell 3000): {whole.iloc[-1] - 100:+.0f}% over the same period. Without the 3 SPACs (cash in trust, ~flat) the index is at {no_spac.iloc[-1]:.0f}. "
+            "DJT, PSQH and UMAC ties predate the inauguration.")
 fig.subplots_adjust(left=0.05, right=0.985, top=top - 0.02, bottom=0.16)
 Path("plots").mkdir(exist_ok=True)
 fig.savefig("plots/4_since_inauguration.png")
