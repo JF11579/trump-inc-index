@@ -110,14 +110,14 @@ for gname, members, bench, bname in GROUPS:
         tab.text(1.0, y, f"${trump_pos[t].iloc[-1]:,.0f}", fontsize=11.5, va="top", ha="right", fontweight="bold")
         y -= step
 
-# ---- callout: the "aren't these just crypto stocks?" answer -------------------
+# ---- callout: answers "did they only fall because crypto crashed?" -------------------
 (ci, cn, cb), (oi, on, ob) = gsum["Crypto businesses"], gsum["Other businesses"]
-ax.text(p.index[0] + pd.Timedelta(days=8), ax.get_ylim()[1] * 0.97, "Aren't these just crypto stocks?",
+ax.text(p.index[0] + pd.Timedelta(days=8), ax.get_ylim()[1] * 0.97, "Did Trump-linked stocks fall just because crypto crashed? No:",
         fontsize=13, fontweight="bold", va="top", color=INK,
         bbox=dict(facecolor=SURF, edgecolor="none", pad=2))
 ax.text(p.index[0] + pd.Timedelta(days=8), ax.get_ylim()[1] * 0.97 - 95,
-        f"4 crypto businesses: ${ci:,} → ${cn:,.0f}\n   (same $ in bitcoin itself: ${cb:,.0f})\n"
-        f"6 non-crypto businesses: ${oi:,} → ${on:,.0f}\n   (same $ in small-company stocks: ${ob:,.0f})",
+        f"The 4 Trump-linked crypto businesses: ${ci:,} → ${cn:,.0f}\n   The same $ in bitcoin itself: ${cb:,.0f}\n"
+        f"The 6 Trump-linked non-crypto businesses: ${oi:,} → ${on:,.0f}\n   The same $ in small-company stocks: ${ob:,.0f}",
         fontsize=11.5, va="top", color=INK, linespacing=1.5,
         bbox=dict(facecolor=SURF, edgecolor="none", pad=2))
 
